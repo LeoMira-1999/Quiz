@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+{{ name }}
+{% endblock title %}
+
+{% block scripts %}
+{% endblock scripts %}
+
+
+{% block content %}
+<div class="col-md-100">
+<div class="row">
+    <div class="col">
+        <h3><b>{{name}}</b></h3>
+        <p>score to pass: {{required_score_to_pass}}%</p>
+    </div>
+    <div class="col text-right" id="finish-box"></div>
+
+    <!-- Timer -->
+    <div class="col text-right h4" id="timer-box">
+        <script type="text/javascript">
+
+            const timerBox = document.getElementById('timer-box')
+
+            const activateTimer = (time) => {
+                if (time.toString().length < 2) {
+                    timerBox.innerHTML = `<b>0${time}:00</b>`
+                } else {
+                    timerBox.innerHTML = `<b>${time}:00</b>`
+                }
+
+                let minutes = time - 1
+                let seconds = 60
+                let displaySeconds
+                let displayMinutes
+
+                const timer = setInterval(()=>{
+                    seconds --
+                    if (seconds < 0) {
+                        seconds = 59
+                        minutes --
+                    }
+                    if (minutes.toString().length < 2) {
+                        displayMinutes = '0'+minutes
+                    } else {
+                        displayMinutes = minutes
+                    }
+                    if(seconds.toString().length < 2) {
+                        displaySeconds = '0' + seconds
+                    } else {
+                        displaySeconds = seconds
+                    }
+                    if (minutes === 0 && seconds === 0) {
+                        timerBox.innerHTML = "<b>00:00</b>"
+                        setTimeout(()=>{
+                            clearInterval(timer)
+                            alert('Time over')
+                            sendData()
+                        }, 500)
+                    }
+
+                    timerBox.innerHTML = `<b>${displayMinutes}:${displaySeconds}</b>`
+                }, 1000)
+            }
+        activateTimer({{ time }})
+
+        </script></div>
+</div>
+<br>
+<a href="{% url 'main-view' %}" class="btn btn-danger">go back</a>
+<br>
+<br>
+<hr>
+<form id="quiz-form" class="mt-3 mb-3">
+    {% csrf_token %}
+
+    {% for questions in obj %}
+        {% for question, data in questions.items %}
+            <br>
+            <div class="mb-2">
+            <h4><b>{{ question }}</b></h4>
+            </div>
+            <br>
+            {% for set, values in data.items %}
+
+                {% for image in values %}
+
+                    {% if "jpg" in image %}
+                        <img src="{{ image }}" alt="">
+                    {% endif %}
+
+                {% endfor %}
+
+                <br>
+                {% for text in values %}
+                    {% if "jpg" not in text %}
+                        <div class="form-check form-check-inline">
+                            <div>
+                                    <input type="radio" class="ans" id="{{ question }}-{{ text }}" name="{{ question }}" value="{{ text }}">
+                                    <label for="{{ question }}">{{ text }}</label>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                {% endfor %}
+
+            {% endfor %}
+            <hr>
+
+         {% endfor %}
+
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary mt-3">Submit</button>
+</form>
+<div id="score-box"></div>
+<div id="result-box"></div>
+</div>
+{% endblock content %}
+
+{% block end_script %}
+    <script type="text/javascript" defer>
+console.log('hello world quiz')
+
+const quizBox = document.getElementById('quiz-box')
+const scoreBox = document.getElementById('score-box')
+const resultBox = document.getElementById('result-box')
+const finishBox = document.getElementById('finish-box')
+const url = window.location.href
+
+
+const quizForm = document.getElementById('quiz-form')
+const csrf = document.getElementsByName('csrfmiddlewaretoken')
+
+const sendData = () => {
+    const elements = [...document.getElementsByClassName('ans')]
+    const data = {}
+    data['csrfmiddlewaretoken'] = csrf[0].value
+    elements.forEach(el=>{
+        if (el.checked) {
+            data[el.name] = el.value
+        } else {
+            if (!data[el.name]) {
+                data[el.name] = null
+            }
+        }
+    })
+
+    $.ajax({
+        type: 'POST',
+        url: `${url}save/`,
+        data: data,
+        success: function(response){
+            const results = response.results
+
+            quizForm.classList.add('d-none')
+
+            scoreBox.innerHTML = `${response.passed ? 'Congratulations! ' : 'Ups..:( '}Your result is ${response.score} points`
+
+            console.log(results)
+
+            // for each question display new element where user will be shown if he succeeded or failed and the points
+            results.forEach(res=>{
+                console.log(res)
+                const resDiv = document.createElement("div")
+                for (const [question, resp] of Object.entries(res)){
+
+                    resDiv.innerHTML += question
+                    const cls = ['container', 'p-3', 'text-light', 'h6']
+                    resDiv.classList.add(...cls)
+                    const not_answer = resp['not answered']
+
+                    console.log(not_answer)
+                    console.log(resp);
+
+                    if (not_answer) {
+                        const score = resp['score']
+                        resDiv.innerHTML += `- not answered, score: -${score}`
+                        resDiv.classList.add('bg-danger')
+                    }
+                    else {
+                        const answer = resp['answered']
+                        const correct = resp['correct_answer']
+                        const score = resp['score']
+
+                        if (answer === correct) {
+                            resDiv.classList.add('bg-success')
+                            resDiv.innerHTML += ` answered: ${answer}, score: ${score}`
+                        } else {
+                            resDiv.classList.add('bg-danger')
+                            resDiv.innerHTML += ` | correct answer: ${correct}`
+                            resDiv.innerHTML += ` | answered: ${answer}, score: -${score}`
+                        }
+                    }
+                }
+                resultBox.append(resDiv)
+            })
+        },
+        error: function(error){
+            console.log(error)
+        }
+    })
+}
+
+// Waiting for user to hit submit button to start processing question
+quizForm.addEventListener('submit', e=>{
+    e.preventDefault()
+    sendData()
+    timerBox.classList.add('d-none')
+    finishBox.innerHTML = `<h3><b>Finished</b></h3>`
+})
+</script>
+
+{% endblock end_script %}

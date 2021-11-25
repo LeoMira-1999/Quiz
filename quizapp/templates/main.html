@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+{% block scripts %}
+    <script src="{% static 'js/main.js' %}" defer></script>
+    <script src="{% static 'css/cover.css' %}"></script>
+{% endblock scripts %}
+
+{% block title %}
+home
+{% endblock title %}
+
+{% block content %}
+
+    <div>
+        <div>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <h1>Test you knowledge on microscopy</h1>
+        <br>
+            <h5>Try out one of our quizes to test out your knowledge:</h5>
+        <br>
+        <!-- Modal from boostrap-->
+        <div class="modal fade" id="quizStartModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Start?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body" id="modal-body-confirm">
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-success" id="start-button">Yes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+            <div class="col-md-6">
+
+            <!-- If user is authenticated -->
+            {% if request.user.is_authenticated %}
+                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+
+                <!-- Display every quiz as a button -->
+                {% for obj in quizs %}
+                    <div class="btn-group mr-2 mx-2" role="group">
+                        <button
+                            class="btn btn-primary modal-button btn-lg d-block col-sm-8"
+                            data-pk="{{obj.pk}}"
+                            data-quiz="{{obj.name}}"
+                            data-questions="{{obj.number_of_questions}}"
+                            data-difficulty="{{obj.difficulty}}"
+                            data-time="{{obj.time}}"
+                            data-pass = "{{obj.required_score_to_pass}}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#quizStartModal">
+                            {{obj.name}}<br>
+                        </button>
+                    </div>
+                {% endfor %}
+                </div>
+            <!-- Otherwise you have to login -->
+            {% else %}
+                <div class="row">
+                        <a href="{% url 'login' %}"><button class="btn btn-primary w-100 btn-lg">Please login to get access to the quizes</button></a>
+                </div>
+            {% endif %}
+            </div>
+        <hr>
+        <br>
+
+        <!-- Carousel -->
+        <div id="carouselExampleCaptions" class="carousel slide" data-bs-ride="carousel">
+          <div class="carousel-indicators">
+            <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="1" aria-label="Slide 2"></button>
+            <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="2" aria-label="Slide 3"></button>
+          </div>
+          <div class="carousel-inner">
+              {% for image in images_active %}
+                  <div class="carousel-item active">
+                      <a href="{% url 'about' %}"><img src="{{ image.processed_image_main.url }}" class="rounded mx-auto d-block" ></a>
+                  </div>
+              {% endfor %}
+
+              {% for image in images_inactive %}
+                      <div class="carousel-item">
+                          <a href="{% url 'about' %}"><img src="{{ image.processed_image_main.url }}" class="rounded mx-auto d-block" ></a>
+                      </div>
+              {% endfor %}
+        </div>
+
+        </div>
+    </div>
+    </div>
+
+
+
+{% endblock content %}
